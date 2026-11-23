@@ -26,15 +26,24 @@ async def test_project(dut):
     dut._log.info("Test project behavior")
 
     # Set the input values you want to test
-    dut.ui_in.value = 20
-    dut.uio_in.value = 30
+    # A = 1101 (13), B = 0010 (2)
+    # A3 y B3 entran por uio_in[0] y uio_in[1].
+    dut.uio_in.value = 0b01
 
-    # Wait for one clock cycle to see the output values
+    # ui_in, en orden: ENABLE, SELECTOR, B[2:0], A[2:0]
+    for entrada, esperado in [
+        (0b1_0_010_101, 13),  # Habilitado, selecciona A
+        (0b1_1_010_101,  2),  # Habilitado, selecciona B
+        (0b0_0_010_101,  0),  # Deshabilitado con selector 0
+        (0b0_1_010_101,  0),  # Deshabilitado con selector 1
+    ]:
+        dut.ui_in.value = entrada
+        await ClockCycles(dut.clk, 1)
+        assert int(dut.uo_out.value) == esperado
+
+    # Comprueba también que B3 llega a la salida.
+    dut.uio_in.value = 0b10
+    dut.ui_in.value = 0b1_1_010_101
     await ClockCycles(dut.clk, 1)
-
-    # The following assersion is just an example of how to check the output values.
-    # Change it to match the actual expected output of your module:
-    assert dut.uo_out.value == 50
-
-    # Keep testing the module by changing the input values, waiting for
+    assert int(dut.uo_out.value) == 10
     # one or more clock cycles, and asserting the expected output values.
